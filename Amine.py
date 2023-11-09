@@ -39,11 +39,29 @@ def initialize_particles(roi, num_particles):
 
 
 def predict_particles(particles,sigma):
-  noise = np.random.randn(*particles.shape) * sigma
+  noise = np.random.randn(particles.shape) * sigma
   particles += noise
   return particles
    
+def weights_update(particles,frame,hist_ref,roi_size,lamda=0.5):
+  weights=np.zeros(particles.shape[0])
 
+  for i, particle in enumerate(particles):
+   x, y = particle
+   w,h = roi_size
+   roi= (int(x-w//2), int(y-h//2), w, h)
+
+  roi_hist=calculate_histogram(frame,roi)
+  distance=cv2.compareHist(hist_ref,roi_hist,cv2.HISTCMP_BHATTACHARYYA)
+
+  weights[i]=np.exp(-lamda*(distance**2))
+  weights /= weights.sum()
+
+  return weights
+
+
+    
+   
 
 roi, roi_hist = initialize_tracking(cap)
 
