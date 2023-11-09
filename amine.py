@@ -39,7 +39,7 @@ def initialize_particles(roi, num_particles):
 
 
 def predict_particles(particles,sigma):
-  noise = np.random.randn(*particles.shape) * sigma
+  noise = np.random.randn(particles.shape) * sigma
   particles += noise
   return particles
    
