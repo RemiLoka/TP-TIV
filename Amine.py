@@ -31,15 +31,15 @@ def initialize_particles(roi, num_particles):
     x, y, w, h = roi
     center=(x+w//2, y+h//2)
 
-    paricles=np.array([np.random.normal(center, 20) for _ in range(num_particles)])
+    particles=np.array([np.random.normal(center, 2) for _ in range(num_particles)])
     weights=np.ones(num_particles)/num_particles
 
-    return paricles, weights
+    return particles, weights
 
 
 
 def predict_particles(particles,sigma):
-  noise = np.random.randn(particles.shape) * sigma
+  noise = np.random.randn(*particles.shape) * sigma
   particles += noise
   return particles
    
@@ -51,11 +51,11 @@ def weights_update(particles,frame,hist_ref,roi_size,lamda=0.5):
    w,h = roi_size
    roi= (int(x-w//2), int(y-h//2), w, h)
 
-  roi_hist=calculate_histogram(frame,roi)
-  distance=cv2.compareHist(hist_ref,roi_hist,cv2.HISTCMP_BHATTACHARYYA)
+   roi_hist=calculate_histogram(frame,roi)
+   distance=cv2.compareHist(hist_ref,roi_hist,cv2.HISTCMP_BHATTACHARYYA)
 
-  weights[i]=np.exp(-lamda*(distance**2))
-  weights /= weights.sum()
+   weights[i]=np.exp(-lamda*(distance**2))
+   weights /= np.sum(weights)
 
   return weights
 
@@ -71,7 +71,7 @@ def resample(particles, weights):
 
   cumulative_sum=np.cumsum(weights)
 
-  positions= (np.arrange(N)+np.random.rand(N))/N
+  positions= (np.arange(N)+np.random.random(N))/N
 
   indexes = np.searchsorted(cumulative_sum, positions)
 
@@ -82,15 +82,57 @@ def resample(particles, weights):
   return resampled_particles, uniform_weights
 
 
+def estimate_position(particles, weights):
+    return np.average(particles, weights=weights, axis=0)
+
+
+def visualize_tracking(frame, pos_estimate, roi_size):
+    # Draw the rectangle around the estimated position
+    x, y = pos_estimate
+    w, h = roi_size
+    top_left = (int(x - w / 2), int(y - h / 2))
+    bottom_right = (int(x + w / 2), int(y + h / 2))
+    cv2.rectangle(frame, top_left, bottom_right, (0, 255, 0), 2)
 
 
 
 
 
+roi_hist,roi = initialize_tracking(cap)
+
+#plt.bar(range(len(roi_hist)), roi_hist, width=1)
+#plt.show()
+
+num_particles = 100  
+particles, weights = initialize_particles(roi, num_particles)
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+    
+    sigma=np.array([10,10])
+    particles=predict_particles(particles,sigma)
+
+    weights=weights_update(particles,frame,roi_hist,roi[2:])
+    particles,weights=resample(particles,weights)
+
+    pos_estimate=estimate_position(particles,weights)
+
+    visualize_tracking(frame,pos_estimate,roi[2:])
+
+    cv2.imshow('frame', frame)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+    
+cap.release()
 
 
-roi, roi_hist = initialize_tracking(cap)
 
-plt.bar(range(len(roi_hist)), roi_hist, width=1)
-plt.show()
+    
+
+    
+
+
     
