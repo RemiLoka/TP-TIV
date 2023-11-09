@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 cap = cv2.VideoCapture('data/synthetic/escrime-4-3.avi')
 
 
@@ -25,7 +26,27 @@ def initialize_tracking(video_capture):
   return roi_hist, roi
 
 
+
+def initialize_particles(roi, num_particles):
+    x, y, w, h = roi
+    center=(x+w//2, y+h//2)
+
+    paricles=np.array([np.random.normal(center, 20) for _ in range(num_particles)])
+    weights=np.ones(num_particles)/num_particles
+
+    return paricles, weights
+
+
+
+def predict_particles(particles,sigma):
+  noise = np.random.randn(*particles.shape) * sigma
+  particles += noise
+  return particles
+   
+
+
 roi, roi_hist = initialize_tracking(cap)
 
 plt.bar(range(len(roi_hist)), roi_hist, width=1)
 plt.show()
+    
