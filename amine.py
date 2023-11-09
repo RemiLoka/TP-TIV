@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
-cap = cv2.VideoCapture('/data/synthetic/escrime-4-3.avi')
+import matplotlib.pyplot as plt
+
+cap = cv2.VideoCapture('data/synthetic/escrime-4-3.avi')
 
 
 def calculate_histogram(image, tracked_area):
@@ -24,3 +26,5 @@ def initialize_tracking(video_capture):
 
 
 roi, roi_hist = initialize_tracking(cap)
+
+plt.imshow(roi_hist, interpolation = 'nearest')
