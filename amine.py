@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-cap = cv2.VideoCapture('/users/amindahi88/Downloads/video sequences/synthetic/escrime-4-3.avi')
+cap = cv2.VideoCapture('/data/synthetic/escrime-4-3.avi')
 
 
 def calculate_histogram(image, tracked_area):
