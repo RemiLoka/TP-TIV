@@ -3,6 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from PIL import Image
+import numpy as np
 
 def extract_frame(video_path):
     video_capture = cv2.VideoCapture(video_path)
@@ -66,3 +67,15 @@ def histo_roi(roi, frame):
     return hist
 
 histo_roi(roi,'frames/frame_0.jpg')
+
+def initialize_particles(roi, num_particles, sigma):
+    x, y, w, h = roi
+    center=(x+w//2, y+h//2)
+
+    paricles=np.array([np.random.normal(center, sigma) for _ in range(num_particles)])
+    weights=np.ones(num_particles)/num_particles
+
+    noise = np.random.randn(particles.shape) * sigma
+    particles += noise
+
+    return paricles, weights
