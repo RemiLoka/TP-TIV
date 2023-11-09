@@ -61,7 +61,33 @@ def weights_update(particles,frame,hist_ref,roi_size,lamda=0.5):
 
 
     
-   
+
+
+
+
+def resample(particles, weights):
+    
+  N=len(particles)
+
+  cumulative_sum=np.cumsum(weights)
+
+  positions= (np.arrange(N)+np.random.rand(N))/N
+
+  indexes = np.searchsorted(cumulative_sum, positions)
+
+  resampled_particles = particles[indexes]
+
+  uniform_weights = np.ones(N) / N
+
+  return resampled_particles, uniform_weights
+
+
+
+
+
+
+
+
 
 roi, roi_hist = initialize_tracking(cap)
 
