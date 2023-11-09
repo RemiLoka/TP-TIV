@@ -27,4 +27,5 @@ def initialize_tracking(video_capture):
 
 roi, roi_hist = initialize_tracking(cap)
 
-plt.imshow(roi_hist, interpolation = 'nearest')
+plt.bar(range(len(roi_hist)), roi_hist, width=1)
+plt.show()
