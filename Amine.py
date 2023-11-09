@@ -31,15 +31,15 @@ def initialize_particles(roi, num_particles):
     x, y, w, h = roi
     center=(x+w//2, y+h//2)
 
-    paricles=np.array([np.random.normal(center, 20) for _ in range(num_particles)])
+    particles=np.array([np.random.normal(center, 2) for _ in range(num_particles)])
     weights=np.ones(num_particles)/num_particles
 
-    return paricles, weights
+    return particles, weights
 
 
 
 def predict_particles(particles,sigma):
-  noise = np.random.randn(particles.shape) * sigma
+  noise = np.random.randn(*particles.shape) * sigma
   particles += noise
   return particles
    
@@ -51,11 +51,11 @@ def weights_update(particles,frame,hist_ref,roi_size,lamda=0.5):
    w,h = roi_size
    roi= (int(x-w//2), int(y-h//2), w, h)
 
-  roi_hist=calculate_histogram(frame,roi)
-  distance=cv2.compareHist(hist_ref,roi_hist,cv2.HISTCMP_BHATTACHARYYA)
+   roi_hist=calculate_histogram(frame,roi)
+   distance=cv2.compareHist(hist_ref,roi_hist,cv2.HISTCMP_BHATTACHARYYA)
 
-  weights[i]=np.exp(-lamda*(distance**2))
-  weights /= weights.sum()
+   weights[i]=np.exp(-lamda*(distance**2))
+   weights /= np.sum(weights)
 
   return weights
 
@@ -71,7 +71,7 @@ def resample(particles, weights):
 
   cumulative_sum=np.cumsum(weights)
 
-  positions= (np.arrange(N)+np.random.rand(N))/N
+  positions= (np.arange(N)+np.random.random(N))/N
 
   indexes = np.searchsorted(cumulative_sum, positions)
 
