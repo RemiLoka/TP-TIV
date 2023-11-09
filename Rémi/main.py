@@ -1,9 +1,9 @@
 import cv2
 import os
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from PIL import Image
+
 import numpy as np
+
+import plot
 
 def extract_frame(video_path):
     video_capture = cv2.VideoCapture(video_path)
@@ -38,18 +38,6 @@ def initialize_tracking(video_capture):
 
 roi = [300,218,42,42]
 
-def show_square(roi,frame):
-    im = Image.open(frame)
-    fig, ax = plt.subplots()
-    ax.imshow(im)
-    rect = patches.Rectangle((roi[0], roi[1]), roi[2], roi[3], linewidth=1, edgecolor='r', facecolor='none')
-
-    ax.add_patch(rect)
-
-    plt.show()
-
-show_square(roi,'frames/frame_0.jpg')
-
 def histo_roi(roi, frame):
     image = cv2.imread(frame)
     initial_area = (roi[0], roi[1], roi[0]+roi[2], roi[1]+roi[3])
@@ -59,14 +47,9 @@ def histo_roi(roi, frame):
     hist = cv2.calcHist([hsv], [0], None, [180], [0, 180])
     cv2.normalize(hist, hist, 0, 255, cv2.NORM_MINMAX)
 
-    plt.plot(hist)
-    plt.title('Histogram of the Tracked Area')
-    plt.xlabel('Pixel Value')
-    plt.ylabel('Frequency')
-    plt.show()
     return hist
 
-histo_roi(roi,'frames/frame_0.jpg')
+hist_ref = histo_roi(roi,'frames/frame_0.jpg')
 
 def initialize_particles(roi, num_particles, sigma):
     x, y, w, h = roi
@@ -79,3 +62,8 @@ def initialize_particles(roi, num_particles, sigma):
     particles += noise
 
     return paricles, weights
+
+
+
+plot.show_square(roi,'frames/frame_0.jpg')
+plot.show_hist(hist_ref)
