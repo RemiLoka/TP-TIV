@@ -1,38 +1,37 @@
 import cv2
 import os
 
-# Charger la vidéo
-video_path = "data/synthetic/escrime-4-3.avi"  # Assure-toi que la vidéo est téléchargée dans Colab ou spécifie le chemin complet
+def extract_frame(video_path):
+    video_capture = cv2.VideoCapture(video_path)
 
-video_capture = cv2.VideoCapture(video_path)
+    output_folder = 'frames'
+    os.makedirs(output_folder, exist_ok=True)
 
-# Créer un dossier pour enregistrer les frames
-output_folder = 'frames'
-os.makedirs(output_folder, exist_ok=True)
+    frame_count = 0
+    while video_capture.isOpened():
+        ret, frame = video_capture.read()
+        if not ret:
+            break
+        frame_path = f'{output_folder}/frame_{frame_count}.jpg'
+        cv2.imwrite(frame_path, frame) 
 
-# Sauvegarder les frames en images
-frame_count = 0
-while video_capture.isOpened():
-    ret, frame = video_capture.read()  # Lire une frame
+        frame_count += 1
 
-    if not ret:
-        break
+    video_capture.release()
 
-    frame_path = f'{output_folder}/frame_{frame_count}.jpg'
-    cv2.imwrite(frame_path, frame)  # Enregistrer la frame en tant qu'image
+video_path = "data/synthetic/escrime-4-3.avi"
+extract_frame(video_path)
 
-    frame_count += 1
+def initialize_tracking(video_capture):
+  video_capture = cv2.VideoCapture(video_path)
+  _,frame=video_capture.read()
 
-video_capture.release()
+  roi = cv2.selectROI("Select Object", frame, fromCenter=False, showCrosshair=True)
+  cv2.destroyWindow("Select Object")
 
-import matplotlib.pyplot as plt
+  video_capture.release()
+  return roi
 
-# Parcourir les images enregistrées et les afficher
-for i in range(frame_count):
-    frame_path = f'frames/frame_{i}.jpg'
-    frame = cv2.imread(frame_path)
+roi = initialize_tracking(video_path)
 
-    # Afficher l'image
-    plt.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-    plt.axis('off')
-    plt.show()
+print(roi)
