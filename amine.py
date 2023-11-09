@@ -48,7 +48,7 @@ def weights_update(particles,frame,hist_ref,roi_size,lamda=0.5):
 
   for i, particle in enumerate(particles):
    x, y = particle
-   w,h = roi_hist.shape
+   w,h = roi_size
    roi= (int(x-w//2), int(y-h//2), w, h)
 
   roi_hist=calculate_histogram(frame,roi)
