@@ -55,7 +55,7 @@ def weights_update(particles,frame,hist_ref,roi_size,lamda=0.5):
    distance=cv2.compareHist(hist_ref,roi_hist,cv2.HISTCMP_BHATTACHARYYA)
 
    weights[i]=np.exp(-lamda*(distance**2))
-   weights /= np.sum(weights)
+  weights /= np.sum(weights)
 
   return weights
 
