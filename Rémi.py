@@ -10,6 +10,7 @@ import numpy as np
 ########## Data ##########
 
 video_path = "data/synthetic/escrime-4-3.avi"
+cap = cv2.VideoCapture(video_path)
 
 ########## Request function ##########
 
@@ -31,7 +32,7 @@ def extract_frame(video_path):
 
     video_capture.release()
 
-def initialize_tracking(video_capture):
+def initialize_tracking(video_path):
   video_capture = cv2.VideoCapture(video_path)
   _,frame=video_capture.read()
 
@@ -41,9 +42,8 @@ def initialize_tracking(video_capture):
   video_capture.release()
   return roi
 
-def histo_roi(roi, frame):
+def histo_roi(roi, image):
     x, y, w, h = roi
-    image = cv2.imread(frame)
 
     tracked_area = image[y:y+h+20, x:x+w+20]
     hsv = cv2.cvtColor(tracked_area, cv2.COLOR_BGR2HSV)
@@ -52,7 +52,7 @@ def histo_roi(roi, frame):
 
     return hist
 
-def initialize_particles(roi, num_particles, sigma_rand=10):
+def initialize_particles(roi, num_particles, sigma_rand= 20):
     x, y, w, h = roi
     center=(int(x+w/2), int(y+h/2))
 
@@ -70,15 +70,40 @@ def prediction_particle(roi, particles):
         list_pred_roi.append(roi_particle)
     return list_pred_roi
 
-def correction_particle(roi, frame, list_pred_roi, lamda = 5):
+def correction_particle(roi, frame, list_pred_roi, weights, lamda = 5):
     hist_ref = histo_roi(roi, frame)
-    list_weight = []
-    for pred in list_pred_roi:
-        hist_pred = histo_roi(pred, frame)
+    for i in range(len(list_pred_roi)):
+        hist_pred = histo_roi(list_pred_roi[i], frame)
         dist = cv2.compareHist(hist_ref,hist_pred,cv2.HISTCMP_BHATTACHARYYA)
-        likelihood = np.exp(-lamda*(dist**2))
-        
-    return list_weight
+        weights[i] = np.exp(-lamda*(dist**2))
+    weights /= np.sum(weights)
+    return weights
+
+def resampling_particle(particles, weights):
+    N = len(weights)
+    indices = []
+
+    cumulative_weights = np.cumsum(weights)
+    u = np.random.uniform(0, 1 / N)
+
+    j = 0
+    for i in range(N):
+        while u + i / N > cumulative_weights[j]:
+            j += 1
+        indices.append(j)
+    selected_particles = [particles[i] for i in indices]
+    selected_weights = [weights[i] for i in indices]
+    return selected_particles, selected_weights
+
+def next_pos(selected_particles,selected_weights):
+    return np.average(selected_particles, weights = selected_weights, axis=0)
+
+def visualize_tracking(frame, pos_estimate, roi):
+    x, y = pos_estimate
+    w, h = roi[2:]
+    top_left = (int(x - w / 2), int(y - h / 2))
+    bottom_right = (int(x + w / 2), int(y + h / 2))
+    cv2.rectangle(frame, top_left, bottom_right, (0, 255, 0), 2)
 
 ########## Plot function ##########
 
@@ -106,6 +131,20 @@ extract_frame(video_path)
 
 roi = [300,218,42,42]
 
-particles, weight = initialize_particles(roi, 10)
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+    particles, weights = initialize_particles(roi, 30)
+    list_pred_roi = prediction_particle(roi, particles)
+    weights = correction_particle(roi, frame, list_pred_roi, weights)
+    selected_particles, selected_weights = resampling_particle(list_pred_roi, weights)
+    estimate_pos = next_pos(selected_particles, selected_weights)
+    visualize_tracking(frame,estimate_pos,roi)
+    cv2.imshow('frame', frame)
+cap.release()
+
+particles, weights = initialize_particles(roi, 30)
 list_pred_roi = prediction_particle(roi, particles)
-print(correction_particle(roi, 'frames/frame_0.jpg', list_pred_roi))
+weights = correction_particle(roi, 'frames/frame_0.jpg', list_pred_roi, weights)
+print(resampling_particle(list_pred_roi,weights))
