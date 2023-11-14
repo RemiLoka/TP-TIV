@@ -9,7 +9,7 @@ import numpy as np
 
 ########## Data ##########
 
-video_path = "data/synthetic/escrime-4-3.avi"
+video_path = 'data/synthetic/escrime-4-3.avi'
 cap = cv2.VideoCapture(video_path)
 
 ########## Request function ##########
@@ -32,14 +32,11 @@ def extract_frame(video_path):
 
     video_capture.release()
 
-def initialize_tracking(video_path):
-  video_capture = cv2.VideoCapture(video_path)
+def initialize_tracking(video_capture):
   _,frame=video_capture.read()
 
   roi = cv2.selectROI("Select Object", frame, fromCenter=False, showCrosshair=True)
   cv2.destroyWindow("Select Object")
-
-  video_capture.release()
   return roi
 
 def histo_roi(roi, image):
@@ -99,7 +96,7 @@ def next_pos(selected_particles,selected_weights):
     return np.average(selected_particles, weights = selected_weights, axis=0)
 
 def visualize_tracking(frame, pos_estimate, roi):
-    x, y = pos_estimate
+    x, y = pos_estimate[:2]
     w, h = roi[2:]
     top_left = (int(x - w / 2), int(y - h / 2))
     bottom_right = (int(x + w / 2), int(y + h / 2))
@@ -129,22 +126,28 @@ extract_frame(video_path)
 
 # For frame(0)
 
-roi = [300,218,42,42]
+roi = initialize_tracking(cap)
+
+#roi = [300,218,42,42]
 
 while True:
     ret, frame = cap.read()
+
     if not ret:
         break
+
     particles, weights = initialize_particles(roi, 30)
     list_pred_roi = prediction_particle(roi, particles)
     weights = correction_particle(roi, frame, list_pred_roi, weights)
     selected_particles, selected_weights = resampling_particle(list_pred_roi, weights)
     estimate_pos = next_pos(selected_particles, selected_weights)
     visualize_tracking(frame,estimate_pos,roi)
+
     cv2.imshow('frame', frame)
+
 cap.release()
 
-particles, weights = initialize_particles(roi, 30)
-list_pred_roi = prediction_particle(roi, particles)
-weights = correction_particle(roi, 'frames/frame_0.jpg', list_pred_roi, weights)
-print(resampling_particle(list_pred_roi,weights))
+# particles, weights = initialize_particles(roi, 30)
+# list_pred_roi = prediction_particle(roi, particles)
+# weights = correction_particle(roi, 'frames/frame_0.jpg', list_pred_roi, weights)
+# print(resampling_particle(list_pred_roi,weights))
