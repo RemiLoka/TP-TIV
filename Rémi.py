@@ -42,35 +42,30 @@ def initialize_tracking(video_capture):
 def histo_roi(roi, image):
     x, y, w, h = roi
 
-    tracked_area = image[y:y+h+20, x:x+w+20]
+    tracked_area = image[y:y+h, x:x+w]
 
     hist_channels = [cv2.calcHist([tracked_area], [i], None, [256], [0, 256]) for i in range(3)]
     for i in range(3):
         cv2.normalize(hist_channels[i], hist_channels[i], 0, 255, cv2.NORM_MINMAX)
     hist = np.concatenate(hist_channels, axis=None)
-
-
     return hist
 
-def initialize_particles(roi, num_particles, sigma_rand= 20):
-    x, y, w, h = roi
-    center=(int(x+w/2), int(y+h/2))
-
-    paricles=np.array([np.random.normal(center, sigma_rand) for _ in range(num_particles)])
+def initialize_particles(roi, num_particles, sigma_rand= 5):
+    center = roi[:2]
+    particles=np.array([np.random.normal(center, sigma_rand) for _ in range(num_particles)])
     weights=np.ones(num_particles)/num_particles
-
-    return paricles, weights
+    return particles, weights
 
 def prediction_particle(roi, particles):
-    x, y, w, h = roi
+    w, h = roi[2:]
     list_pred_roi = []
     for particle in particles:
         x_part, y_part = particle
-        roi_particle = int(x_part - w / 2), int(y_part - h / 2), w, h
+        roi_particle = int(x_part - w // 2), int(y_part - h // 2), w, h
         list_pred_roi.append(roi_particle)
     return list_pred_roi
 
-def correction_particle(roi, frame, list_pred_roi, weights, lamda = 5):
+def correction_particle(roi, frame, list_pred_roi, weights, lamda = 1):
     hist_ref = histo_roi(roi, frame)
     for i in range(len(list_pred_roi)):
         hist_pred = histo_roi(list_pred_roi[i], frame)
@@ -96,12 +91,21 @@ def resampling_particle(particles, weights):
 def next_pos(selected_particles,selected_weights):
     return np.average(selected_particles, weights = selected_weights, axis=0)
 
-def visualize_tracking(frame, pos_estimate, roi):
+def apply_roi(estimate_pos, roi):
+    x, y = estimate_pos[:2]
+    w, h = roi[2:]
+    return x, y, w, h
+
+def visualize_tracking(frame, particles, pos_estimate, roi):
     x, y = pos_estimate[:2]
     w, h = roi[2:]
     top_left = (int(x - w / 2), int(y - h / 2))
     bottom_right = (int(x + w / 2), int(y + h / 2))
     cv2.rectangle(frame, top_left, bottom_right, (0, 255, 0), 2)
+
+    for particle in particles:
+        px, py = int(particle[0]), int(particle[1])
+        cv2.circle(frame, (px, py), 1, (0, 0, 255), -1)
 
 ########## Plot function ##########
 
@@ -140,10 +144,10 @@ while True:
     particles, weights = initialize_particles(roi, 20)
     list_pred_roi = prediction_particle(roi, particles)
     weights = correction_particle(roi, frame, list_pred_roi, weights)
-    print(weights)
-    selected_particles = resampling_particle(list_pred_roi, weights)
+    selected_particles = resampling_particle(particles, weights)
     estimate_pos = next_pos(selected_particles, weights)
-    visualize_tracking(frame,estimate_pos,roi)
+    roi = apply_roi(estimate_pos, roi)
+    visualize_tracking(frame,selected_particles,estimate_pos,roi)
 
     cv2.imshow('frame', frame)
     cv2.waitKey(1)
