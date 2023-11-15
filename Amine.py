@@ -7,9 +7,23 @@ cap = cv2.VideoCapture('data/synthetic/escrime-4-3.avi')
 
 #cap = cv2.VideoCapture('data/synthetic/escrime-4-3-cluster.avi')
 
-def histogram_distance(hist1, hist2):
-    # Calculate the custom distance between two histograms
-    return np.sqrt(1 - np.sum(np.sqrt(hist1 * hist2)))
+def calculate_histogram(image, tracked_area):
+    x, y, w, h = tracked_area
+
+    roi = image[y:y+h, x:x+w]
+    hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+
+    # Using Hue, Saturation, and Value channels
+    channels = [0, 1, 2]  # Hue, Saturation, and Value channels
+    hist_size = [30, 32, 32]  # Number of bins for each channel
+    h_ranges = [0, 180]  # Hue range
+    s_ranges = [0, 256]  # Saturation range
+    v_ranges = [0, 256]  # Value range
+
+    roi_hist = cv2.calcHist([hsv_roi], channels, None, hist_size, h_ranges + s_ranges + v_ranges)
+    cv2.normalize(roi_hist, roi_hist, 0, 255, cv2.NORM_MINMAX)
+    return roi_hist.flatten()
+
 
 
 def calculate_histogram(image, tracked_area):
