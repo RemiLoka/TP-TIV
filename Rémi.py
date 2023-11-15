@@ -43,9 +43,12 @@ def histo_roi(roi, image):
     x, y, w, h = roi
 
     tracked_area = image[y:y+h+20, x:x+w+20]
-    hsv = cv2.cvtColor(tracked_area, cv2.COLOR_BGR2HSV)
-    hist = cv2.calcHist([hsv], [0], None, [180], [0, 180])
-    cv2.normalize(hist, hist, 0, 255, cv2.NORM_MINMAX)
+
+    hist_channels = [cv2.calcHist([tracked_area], [i], None, [256], [0, 256]) for i in range(3)]
+    for i in range(3):
+        cv2.normalize(hist_channels[i], hist_channels[i], 0, 255, cv2.NORM_MINMAX)
+    hist = np.concatenate(hist_channels, axis=None)
+
 
     return hist
 
@@ -78,19 +81,17 @@ def correction_particle(roi, frame, list_pred_roi, weights, lamda = 5):
 
 def resampling_particle(particles, weights):
     N = len(weights)
-    indices = []
+    selected_particles = []
 
     cumulative_weights = np.cumsum(weights)
     u = np.random.uniform(0, 1 / N)
 
     j = 0
     for i in range(N):
-        while u + i / N > cumulative_weights[j]:
+        while u + (i / N) > cumulative_weights[j]:
             j += 1
-        indices.append(j)
-    selected_particles = [particles[i] for i in indices]
-    selected_weights = [weights[i] for i in indices]
-    return selected_particles, selected_weights
+        selected_particles.append(particles[j][:])
+    return selected_particles
 
 def next_pos(selected_particles,selected_weights):
     return np.average(selected_particles, weights = selected_weights, axis=0)
@@ -136,14 +137,16 @@ while True:
     if not ret:
         break
 
-    particles, weights = initialize_particles(roi, 30)
+    particles, weights = initialize_particles(roi, 20)
     list_pred_roi = prediction_particle(roi, particles)
     weights = correction_particle(roi, frame, list_pred_roi, weights)
-    selected_particles, selected_weights = resampling_particle(list_pred_roi, weights)
-    estimate_pos = next_pos(selected_particles, selected_weights)
+    print(weights)
+    selected_particles = resampling_particle(list_pred_roi, weights)
+    estimate_pos = next_pos(selected_particles, weights)
     visualize_tracking(frame,estimate_pos,roi)
 
     cv2.imshow('frame', frame)
+    cv2.waitKey(1)
 
 cap.release()
 
