@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 cap = cv2.VideoCapture('data/synthetic/escrime-4-3.avi')
 
+#cap = cv2.VideoCapture('data/synthetic/escrime-4-3-cluster.avi')
 
 def histogram_distance(hist1, hist2):
     # Calculate the custom distance between two histograms
@@ -61,7 +62,7 @@ def predict_particles(particles,sigma):
 
 
 
-def weights_update(particles,frame,hist_ref,roi_size,lamda=0.5):
+def weights_update(particles,frame,hist_ref,roi_size,lamda=3):
   weights=np.zeros(particles.shape[0])
 
   for i, particle in enumerate(particles):
@@ -132,7 +133,7 @@ roi_hist,roi = initialize_tracking(cap)
 #plt.bar(range(len(roi_hist)), roi_hist, width=1)
 #plt.show()
 
-num_particles = 80
+num_particles = 100
 particles, weights = initialize_particles(roi, num_particles)
 
 while True:
@@ -140,7 +141,7 @@ while True:
     if not ret:
         break
     
-    sigma=np.array([1,1])
+    sigma=np.array([4,4])
     particles=predict_particles(particles,sigma)
 
     weights=weights_update(particles,frame,roi_hist,roi[2:])
