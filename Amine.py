@@ -8,16 +8,23 @@ cap = cv2.VideoCapture('data/synthetic/escrime-4-3.avi')
 
 def calculate_histogram(image, tracked_area):
     x, y, w, h = tracked_area
+
     roi = image[y:y+h, x:x+w]
     hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-    channels = [0, 1]  # Hue and saturation channels
-    hist_size = [180, 256]  # Number of bins for hue and saturation
-    h_ranges = [0, 180]  # Hue range
-    s_ranges = [0, 256]  # Saturation range
-    roi_hist = cv2.calcHist([hsv_roi], channels, None, hist_size, h_ranges + s_ranges)
-    #roi_hist = cv2.calcHist([hsv_roi], [0], None, [180], [0, 180])
+
+    # Optionally apply histogram equalization (on Value channel)
+    hsv_roi[..., 2] = cv2.equalizeHist(hsv_roi[..., 2])
+
+    # Using Hue, Saturation, and Value channels
+    channels = [0, 1, 2]  # Hue, Saturation, and Value channels
+    hist_size = [180, 256, 256]  # Adjust the number of bins as needed
+    ranges = [0, 180, 0, 256, 0, 256]
+
+    roi_hist = cv2.calcHist([hsv_roi], channels, None, hist_size, ranges)
     cv2.normalize(roi_hist, roi_hist, 0, 255, cv2.NORM_MINMAX)
-    return roi_hist
+    return roi_hist.flatten()  # Flatten for easier comparison
+
+
 
 
 
@@ -33,13 +40,13 @@ def initialize_tracking(video_capture):
 
 
 def initialize_particles(roi, num_particles):
-    x, y, w, h = roi
-    center=(x+w//2, y+h//2)
+  x, y, w, h = roi
+  center=(x+w//2, y+h//2)
 
-    particles=np.array([np.random.normal(center, 50) for _ in range(num_particles)])
-    weights=np.ones(num_particles)/num_particles
+  particles=np.array([np.random.normal(center, 10) for _ in range(num_particles)])
+  weights=np.ones(num_particles)/num_particles
 
-    return particles, weights
+  return particles, weights
 
 
 
@@ -48,6 +55,8 @@ def predict_particles(particles,sigma):
   particles += noise
   return particles
    
+
+
 def weights_update(particles,frame,hist_ref,roi_size,lamda=0.5):
   weights=np.zeros(particles.shape[0])
 
@@ -69,23 +78,20 @@ def resample(particles, weights):
     N = len(particles)
     cumulative_sum = np.cumsum(weights)
 
-    # Start with a random offset between 0 and 1/N
-    u1 = np.random.uniform(0, 1.0 / N)
-    
-    # Create positions u_i = u1 + (i-1)/N
-    positions = u1 + (np.arange(N) / N)
+    # Use systematic resampling to select particles based on their weights
+    indexes = np.zeros(N, dtype=int)
+    i, j = 0, 0
+    u = np.random.rand() / N
+    for i in range(N):
+        u_i = u + i / N
+        while u_i > cumulative_sum[j]:
+            j += 1
+        indexes[i] = j
 
-    # Ensure positions are within [0, 1) range
-    positions = positions % 1
-
-    indexes = np.searchsorted(cumulative_sum, positions)
     resampled_particles = particles[indexes]
     uniform_weights = np.ones(N) / N
 
     return resampled_particles, uniform_weights
-    
-
-
 
 
 
@@ -121,7 +127,7 @@ roi_hist,roi = initialize_tracking(cap)
 #plt.bar(range(len(roi_hist)), roi_hist, width=1)
 #plt.show()
 
-num_particles = 100
+num_particles = 500
 particles, weights = initialize_particles(roi, num_particles)
 
 while True:
@@ -129,7 +135,7 @@ while True:
     if not ret:
         break
     
-    sigma=np.array([5,5])
+    sigma=np.array([3,3])
     particles=predict_particles(particles,sigma)
 
     weights=weights_update(particles,frame,roi_hist,roi[2:])
